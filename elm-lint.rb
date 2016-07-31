@@ -3,11 +3,11 @@ require 'json'
 require 'open3'
 
 class LintingError
-    def initialize(data)
+    def initialize data
         @data = data
     end
 
-    def to_str()
+    def to_str
         "#{filename}:#{linum}:#{col} [#{type}] #{overview}"
     end
 
@@ -15,7 +15,7 @@ class LintingError
         @data['region']['start']['line']
     end
 
-    def col(*args)
+    def col
         @data['region']['start']['column']
     end
 
@@ -33,28 +33,28 @@ class LintingError
 end
 
 class JsonResponse
-    def initialize(response_str)
+    def initialize response_str
         @response_str = response_str
     end
 
 
-    def parse()
+    def parse
         split_response = @response_str.split "\n"
         output = ""
 
         for line in split_response
-            output += parse_json(line) + "\n"
+            output += parse_json line + "\n"
         end
 
         output
     end
 
-    def parse_json(line)
+    def parse_json line
         json_array = JSON.parse line
         output = ""
 
         for json in json_array
-            err = LintingError.new(json)
+            err = LintingError.new json
             output += err.to_str + "\n"
         end
 
@@ -63,7 +63,7 @@ class JsonResponse
 end
 
 class NonJsonResponse
-    def initialize(filename, response_str)
+    def initialize filename, response_str
         @filename = filename
         @response_str = response_str
     end
@@ -75,24 +75,25 @@ class NonJsonResponse
     end
 
     def overview
-        @response_str.split("\n")[0]
+        split_response = @response_str.split "\n"
+        split_response[0]
     end
 
 end
 
 
 class ElmLint
-    def initialize(filepath)
+    def initialize filepath
         @filepath = filepath
     end
 
     def execute
-        stdout, stderr, status = Open3.capture3("elm-make #{@filepath} --warn --report=json --output /dev/null")
+        stdout, stderr, status = Open3.capture3 "elm-make #{@filepath} --warn --report=json --output /dev/null"
 
-        if stdout != ''
-            @response_str = stdout
-        else
+        if stdout.empty?
             @response_str = stderr
+        else
+            @response_str = stdout
         end
 
         @exit_code = status.exitstatus
@@ -105,14 +106,15 @@ class ElmLint
     end
 
     def clean_output
+        # remove empty lines
         @output.gsub(/^$\n/, '')
     end
 
     def parse
         if is_json?
-            response = JsonResponse.new(@response_str)
+            response = JsonResponse.new @response_str
         else
-            response = NonJsonResponse.new(@filepath, @response_str)
+            response = NonJsonResponse.new @filepath, @response_str
         end
         @output = response.parse
     end
@@ -124,5 +126,5 @@ class ElmLint
 end
 
 
-lint = ElmLint.new(ARGV[0])
+lint = ElmLint.new ARGV[0]
 lint.execute
