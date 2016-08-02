@@ -87,7 +87,26 @@ class ElmLint
         @filepath = filepath
     end
 
+    def find_project_root
+        parts = @filepath.split '/'
+        found = []
+
+        while parts.any? and found.empty?
+            parts.pop
+            dir = parts.join '/'
+            if Dir.exists? dir
+                found = Dir["#{dir}/elm-package.json"]
+            end
+        end
+
+        parts.join('/')
+    end
+
     def execute
+
+        root = find_project_root
+        Dir.chdir root
+
         stdout, stderr, status = Open3.capture3 "elm-make #{@filepath} --warn --report=json --output /dev/null"
 
         if stdout.empty?
