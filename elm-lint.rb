@@ -126,5 +126,8 @@ class ElmLint
 end
 
 
-lint = ElmLint.new ARGV[0]
-lint.execute
+
+if __FILE__ == $0
+    lint = ElmLint.new ARGV[0]
+    lint.execute
+end
